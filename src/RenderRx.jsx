@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
     Box,
     Text,
@@ -19,7 +19,6 @@ import {
     Tooltip,
     Button
 } from '@chakra-ui/react';
-import RenderRx from './RenderRx';
 const potenciasDeDos = ['1', '2', '4', '8', '16', '32']
 const potenciasDeDosStr = ['p1', 'p2', 'p3', 'p4', 'p5', 'p6']
 
@@ -32,23 +31,29 @@ const initRowsValue = {
     p2: [],
     p3: [],
     p4: [],
-    tx: [],
+    rx: [],
 }
 
-export default function Home() {
-    const [rows, setRows] = useState(initRowsValue)
-    const [TX, setTX] = useState([])
+export default function RenderRx({ TX }) {
+    const [rowsRX, setRowsRX] = useState(initRowsValue)
+    const [RX, setRX] = useState([])
+    const [message, setMessage] = useState({ msg: '', err: false, ind: [] })
 
-    const handleChangeStringToSend = ({ target }) => {
-        let chars = [...target.value.split('')].reverse()
+    const handleSetErr = (err, ind) => {
+        const msgSucces = 'MENSAJE SIN ERROR!!✨'
+        const msgError = 'MENSAJE CON ERROR!!🤦‍♂️'
+        setMessage({ msg: err ? msgError : msgSucces, err: err, ind: ind })
+    }
+
+    const handleTransmit = () => {
+        let chars = [...TX].reverse()
         if (chars.length == 0) {
-            setRows({ ...initRowsValue })
-            setTX([])
+            setRowsRX({ ...initRowsValue })
+            setRX([])
             return
         }
-        if (chars.length > 10) return
-        const arrayStringWithParities = []
-        const arrayStringParitiesAndNumbers = []
+        const stringWithParities = []
+        const stringParitiesAndNumbers = []
         let position = 1
         let numbers = 1
 
@@ -61,34 +66,33 @@ export default function Home() {
             p2: [],
             p3: [],
             p4: [],
-            tx: [],
+            rx: [],
         }
 
-        while (chars.length > 0) {
+        for (let i = 0; i < chars.length; i++) {
             const parIndex = potenciasDeDos.findIndex(f => f == position)
             if (parIndex !== -1) {
-                arrayStringWithParities.unshift('p')
-                arrayStringParitiesAndNumbers.unshift(potenciasDeDosStr[parIndex])
+                stringWithParities.unshift('p')
+                stringParitiesAndNumbers.unshift(potenciasDeDosStr[parIndex])
             } else {
-                arrayStringWithParities.unshift(chars[0])
-                arrayStringParitiesAndNumbers.unshift(`n${numbers}`)
-                chars.shift()
+                stringWithParities.unshift(chars[i])
+                stringParitiesAndNumbers.unshift(`n${numbers}`)
                 numbers++
             }
             position++
         }
 
-        rowsValue['n+p'] = arrayStringParitiesAndNumbers
+        rowsValue['n+p'] = stringParitiesAndNumbers
 
-        arrayStringParitiesAndNumbers.forEach((item, i) => {
-            const position = arrayStringParitiesAndNumbers.length - i
+        stringParitiesAndNumbers.forEach((item, i) => {
+            const position = stringParitiesAndNumbers.length - i
             rowsValue['posicion'].push(position)
             rowsValue['binario'].push(binaryWithZeros(position))
-            rowsValue['n'].push(item.includes('n') ? arrayStringWithParities[i] : '')
-            rowsValue['p1'].push(binaryWithZeros(position)[3] == '1' ? arrayStringWithParities[i] : '')
-            rowsValue['p2'].push(binaryWithZeros(position)[2] == '1' ? arrayStringWithParities[i] : '')
-            rowsValue['p3'].push(binaryWithZeros(position)[1] == '1' ? arrayStringWithParities[i] : '')
-            rowsValue['p4'].push(binaryWithZeros(position)[0] == '1' ? arrayStringWithParities[i] : '')
+            rowsValue['n'].push(item.includes('n') ? stringWithParities[i] : '')
+            rowsValue['p1'].push(binaryWithZeros(position)[3] == '1' ? stringWithParities[i] : '')
+            rowsValue['p2'].push(binaryWithZeros(position)[2] == '1' ? stringWithParities[i] : '')
+            rowsValue['p3'].push(binaryWithZeros(position)[1] == '1' ? stringWithParities[i] : '')
+            rowsValue['p4'].push(binaryWithZeros(position)[0] == '1' ? stringWithParities[i] : '')
         });
 
         rowsValue['p1'] = resolveParities(rowsValue['p1'])
@@ -96,47 +100,34 @@ export default function Home() {
         rowsValue['p3'] = resolveParities(rowsValue['p3'])
         rowsValue['p4'] = resolveParities(rowsValue['p4'])
 
-        rowsValue['tx'] = resolveTX(rowsValue)
-        setTX(rowsValue['tx'])
-        setRows({ ...rowsValue })
+        rowsValue['rx'] = resolveTX(rowsValue);
+        const rowsValueReverse = [...rowsValue['rx']].reverse()
+        let parities = {}
+        rowsValueReverse.forEach((val, i) => {
+            const parIndex = potenciasDeDos.findIndex(f => f == (i + 1))
+            if (parIndex !== -1) {
+                parities[i] = val
+            }
+        })
+
+        const ind = []
+        const TXReverse = [...TX].reverse()
+        for (let parityI in parities) {
+            if (parities[parityI] != TXReverse[parityI]) {
+                ind.push(parityI)
+            }
+        }
+        handleSetErr(ind.length > 0, ind)
+
+        setRX(rowsValue['rx'])
+        setRowsRX({ ...rowsValue })
     }
 
     return (
-        <Flex justify={'center'} w={'100vw'}>
-            <Box textAlign="center" fontSize="xl" w={['95vw', '90vw', '85vw', '80vw', '80vw']}>
-                <Input value={rows['n'].join('')} onChange={handleChangeStringToSend} placeholder='cadena a enviar max 10bits' my={'15px'} />
-                <Flex flexDir={'column'}>
-                    <RenderTable rows={rows} />
-                    <Flex flexDir={'column'}>
-                        <Text my={'15px'}>Vas a transmitir:</Text>
-                        <Flex justifyContent={'space-evenly'} w={'100%'}>
-                            {
-                                TX && TX.map((tx, i) => {
-                                    return (
-                                        <Tooltip label='click para insertar error'>
-                                            <Text
-                                                border={'1px solid #000'}
-                                                py={2}
-                                                px={3}
-                                                cursor={'pointer'}
-                                                onClick={() => setTX(prev => prev.map((t, j) => j == i ? t == 0 ? '1' : '0' : t))}
-                                                bg={tx == rows['tx'][i] ? '#fff' : 'red.200'}
-                                                userSelect={'none'}
-                                            >
-                                                {tx}
-                                            </Text>
-                                        </Tooltip>
-                                    )
-                                })
-                            }
-                        </Flex>
-                    </Flex>
-                    {
-                        TX.length > 0 &&
-                        < RenderRx TX={TX} txSinErr={rows['tx']} />
-                    }
-                </Flex>
-            </Box >
+        <Flex flexDir={'column'}>
+            <Button my={'15px'} onClick={handleTransmit}>Transmitir</Button>
+            <RenderTable rows={rowsRX} ind={message.ind} />
+            <Text my={'25px'}>{message.msg}</Text>
         </Flex>
     );
 }
@@ -165,22 +156,22 @@ function resolveParities(arr) {
 }
 
 function resolveTX(rows) {
-    let tx = []
+    let rx = []
     const rowsCopy = { ...rows }
     delete rowsCopy['binario']
     delete rowsCopy['n']
     delete rowsCopy['n+p']
     delete rowsCopy['posicion']
-    delete rowsCopy['tx']
+    delete rowsCopy['rx']
     for (const key in rows) {
         rows[key].forEach((item, i) => {
-            if (item.length > 0) tx[i] = item
+            if (item.length > 0) rx[i] = item
         })
     }
-    return tx
+    return rx
 }
 
-const RenderTable = ({ rows }) => {
+const RenderTable = ({ rows, ind }) => {
     return (
         <TableContainer border={'1px solid gray'}>
             <Table variant='simple' >
@@ -270,11 +261,11 @@ const RenderTable = ({ rows }) => {
                         }
                     </Tr>
                     <Tr>
-                        <Td>TX</Td>
+                        <Td>RX</Td>
                         {
-                            rows['tx'].map((char, i) => {
+                            rows['rx'].map((char, i) => {
                                 return (
-                                    <Th bg={rows['n+p'][i].includes('p') && 'blue.100'}>{char}</Th>
+                                    <Th bg={(ind.includes((rows['rx'].length - 1 - i) + '') && 'red.200' || rows['n+p'][i].includes('p') && 'blue.100')}>{char}</Th>
                                 )
                             })
                         }
