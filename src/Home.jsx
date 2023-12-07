@@ -46,7 +46,7 @@ export default function Home() {
             setTX([])
             return
         }
-        if (chars.length > 10) return
+        if (chars.length > 10 || !/^[01]*$/.test(target.value)) return
         const arrayStringWithParities = []
         const arrayStringParitiesAndNumbers = []
         let position = 1
@@ -102,7 +102,7 @@ export default function Home() {
     }
 
     return (
-        <Flex justify={'center'} w={'100vw'}>
+        <Flex justify={'center'} w={'100vw'} h={'100vh'} position={'relative'}>
             <Box textAlign="center" fontSize="xl" w={['95vw', '90vw', '85vw', '80vw', '80vw']}>
                 <Input value={rows['n'].join('')} onChange={handleChangeStringToSend} placeholder='cadena a enviar max 10bits' my={'15px'} />
                 <Flex flexDir={'column'}>
@@ -136,7 +136,12 @@ export default function Home() {
                         < RenderRx TX={TX} txSinErr={rows['tx']} />
                     }
                 </Flex>
-            </Box >
+            </Box>
+            <Flex bg={'lightgray'} w={'80px'} h={'55px'} borderRadius={'15px'} position={'absolute'} right={10} bottom={10} justify={'center'} align={'center'} cursor={'pointer'}>
+                <Text fontWeight={'bold'}>
+                    about
+                </Text>
+            </Flex>
         </Flex>
     );
 }
